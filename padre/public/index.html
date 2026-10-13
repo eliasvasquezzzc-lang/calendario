@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F2FB">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Agenda">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Agenda de fiestas</title>
+<script>
+/* Aplica el tema antes de pintar para evitar parpadeo */
+(function () {
+  var t;
+  try { t = localStorage.getItem('tema'); } catch (e) {}
+  if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = t;
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F2FB; --card:#FFFFFF; --ink:#1A1433; --muted:#6F6893; --line:#ECE8F7;
+  --primary:#6C47FF; --primary-soft:#EEE9FF; --btn:#6C47FF;
+  --pink:#FF3D8B; --pink-soft:#FFE6F0;
+  --green:#0C9B77; --green-soft:#DDF7EF;
+  --fin:#F6F3FF; --nav:rgba(255,255,255,.88);
+  --shadow:0 1px 2px rgba(26,20,51,.04), 0 10px 28px rgba(60,40,140,.08);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0E0B1C; --card:#181430; --ink:#F3F0FF; --muted:#9C95C4; --line:#2A2549;
+  --primary:#A08BFF; --primary-soft:#2A2250; --btn:#7A5AFF;
+  --pink:#FF5C9F; --pink-soft:#3C1A33;
+  --green:#34D3A5; --green-soft:#12342E;
+  --fin:#1D1938; --nav:rgba(24,20,48,.88);
+  --shadow:0 0 0 1px rgba(255,255,255,.04), 0 12px 30px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.4; font-size:16px;
+  padding-bottom:calc(104px + env(safe-area-inset-bottom));
+  transition:background .25s,color .25s;
+}
+h1,h2,h3,h4,p{margin:0}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+
+/* Encabezado */
+header{
+  max-width:560px; margin:0 auto; display:flex; align-items:center; justify-content:space-between;
+  padding:calc(18px + env(safe-area-inset-top)) 20px 6px;
+}
+header p{color:var(--muted); font-weight:600; font-size:.9rem; text-transform:capitalize}
+header h1{font-size:1.65rem; font-weight:800; letter-spacing:-.02em}
+.icon-btn{
+  width:44px; height:44px; border-radius:50%; border:0; display:grid; place-items:center;
+  background:var(--card); color:var(--ink); box-shadow:var(--shadow);
+}
+.icon-btn.suave{background:var(--primary-soft); color:var(--primary); box-shadow:none}
+.icon-btn:active{transform:scale(.94)}
+
+main{max-width:560px; margin:0 auto; padding:14px 16px}
+.vista[hidden]{display:none}
+.card{background:var(--card); border-radius:22px; box-shadow:var(--shadow); padding:16px; margin-bottom:16px}
+.titulo-sec{font-size:1.15rem; font-weight:800; letter-spacing:-.01em; margin:22px 4px 10px}
+
+/* Próxima fiesta */
+.hero{
+  position:relative; overflow:hidden; border-radius:24px; padding:18px 18px 20px; margin-bottom:16px; color:#fff;
+  background:linear-gradient(135deg,#6C47FF 0%,#9B4DFF 55%,#FF3D8B 120%);
+  box-shadow:0 12px 30px rgba(108,71,255,.32); cursor:pointer; display:block; width:100%; text-align:left; border:0;
+}
+.hero::before,.hero::after{content:""; position:absolute; border-radius:50%; background:rgba(255,255,255,.12)}
+.hero::before{width:150px; height:150px; right:-40px; top:-50px}
+.hero::after{width:70px; height:70px; right:60px; bottom:-30px; background:rgba(255,255,255,.1)}
+.hero-top{display:flex; justify-content:space-between; align-items:center; position:relative}
+.hero-top span{font-weight:600; font-size:.9rem; opacity:.9}
+.pill{background:rgba(255,255,255,.22); padding:4px 12px; border-radius:99px; font-weight:700; font-size:.82rem}
+.hero h2{font-size:1.5rem; font-weight:800; letter-spacing:-.02em; margin:12px 0 4px; position:relative}
+.hero p{position:relative; opacity:.92; font-weight:500; font-size:.95rem}
+.hero .fila-h{display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; position:relative}
+.hero .monto-h{font-size:1.3rem; font-weight:800}
+
+/* Calendario */
+.mes-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+.mes-nav h2{font-size:1.2rem; font-weight:800; text-transform:capitalize; letter-spacing:-.01em}
+.grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+.dow{text-align:center; font-size:.75rem; font-weight:700; color:var(--muted); padding:4px 0 6px}
+.dow.fin{color:var(--ink)}
+.dia{
+  aspect-ratio:1/1.05; border:0; border-radius:14px; background:transparent; padding:0;
+  display:flex; align-items:center; justify-content:center; font-weight:600; font-size:.98rem;
+}
+.dia .n{width:36px; height:36px; display:grid; place-items:center; border-radius:50%}
+.dia.fin{background:var(--fin)}
+.dia.pasado{color:var(--muted); opacity:.55}
+.dia.hoy .n{box-shadow:inset 0 0 0 2px var(--primary); color:var(--primary); font-weight:800}
+.dia.ocupado .n{background:var(--pink); color:#fff; font-weight:800; box-shadow:none}
+.dia.sel{box-shadow:inset 0 0 0 2px var(--primary); background:var(--primary-soft)}
+.dia.vacio{visibility:hidden}
+.leyenda{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:.82rem; color:var(--muted); font-weight:500}
+.leyenda i{display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:-1px}
+
+/* Detalle del día */
+.det-cab{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px}
+.det-cab h3{font-size:1.1rem; font-weight:800; letter-spacing:-.01em}
+.badge{padding:4px 12px; border-radius:99px; font-size:.8rem; font-weight:700; white-space:nowrap}
+.badge.ok{background:var(--green-soft); color:var(--green)}
+.badge.no{background:var(--pink-soft); color:var(--pink)}
+.badge.neutro{background:var(--primary-soft); color:var(--muted)}
+.cliente{display:flex; align-items:center; gap:12px}
+.avatar{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:800; flex:none}
+.cliente .info{flex:1; min-width:0}
+.cliente h4{font-size:1.05rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tema-chip{display:inline-flex; align-items:center; gap:6px; background:var(--primary-soft); color:var(--primary); padding:3px 10px; border-radius:99px; font-size:.8rem; font-weight:700; margin-top:4px; max-width:100%}
+.tema-chip .ic{width:14px; height:14px}
+.precio{font-size:1.2rem; font-weight:800}
+.acciones{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px}
+.acc{
+  display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px; border-radius:14px;
+  background:var(--primary-soft); color:var(--primary); border:0; text-decoration:none; font-weight:700; font-size:.8rem;
+}
+.acc.wa{background:var(--green-soft); color:var(--green)}
+.acc.peligro{background:var(--pink-soft); color:var(--pink)}
+.libre-msg{color:var(--muted); font-size:.95rem}
+
+.datos{display:flex; flex-direction:column; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+.datos div{display:flex; align-items:center; gap:10px; font-weight:600; font-size:.95rem}
+.datos .ic{color:var(--primary)}
+
+/* Estadísticas y lista */
+.stats{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px}
+.stat{background:var(--card); border-radius:20px; box-shadow:var(--shadow); padding:14px}
+.stat .ico{width:34px; height:34px; border-radius:11px; background:var(--primary-soft); color:var(--primary); display:grid; place-items:center; margin-bottom:10px}
+.stat b{display:block; font-size:1.4rem; font-weight:800; letter-spacing:-.02em}
+.stat span{color:var(--muted); font-size:.82rem; font-weight:600}
+.item{
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:0; background:var(--card);
+  box-shadow:var(--shadow); border-radius:18px; padding:12px; margin-bottom:10px;
+}
+.fecha-bloque{width:50px; height:54px; border-radius:14px; background:var(--pink-soft); color:var(--pink); display:flex; flex-direction:column; align-items:center; justify-content:center; flex:none}
+.fecha-bloque b{font-size:1.3rem; font-weight:800; line-height:1}
+.fecha-bloque small{font-size:.72rem; font-weight:700; text-transform:capitalize}
+.item .info{flex:1; min-width:0}
+.item h4{font-size:1rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.item p{color:var(--muted); font-size:.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.item .precio{font-size:1rem}
+.vacio-msg{color:var(--muted); text-align:center; padding:26px 12px; border:2px dashed var(--line); border-radius:20px; font-size:.95rem}
+
+/* Formularios (lista agrupada estilo iOS) */
+.grupo{background:var(--card); border-radius:22px; box-shadow:var(--shadow); overflow:hidden}
+.fila{display:flex; align-items:center; gap:14px; padding:12px 16px; border-bottom:1px solid var(--line); cursor:text; transition:background .15s}
+.fila:last-child{border-bottom:0}
+.fila:focus-within{background:var(--primary-soft)}
+.fila .ico{width:40px; height:40px; border-radius:13px; background:var(--primary-soft); color:var(--primary); display:grid; place-items:center; flex:none}
+.fila:focus-within .ico{background:var(--card)}
+.fila .cuerpo{flex:1; min-width:0}
+.fila .etq{display:block; font-size:.78rem; font-weight:600; color:var(--muted)}
+.fila input{border:0; background:transparent; height:30px; padding:0; width:100%; outline:none; font-size:16px; font-weight:600}
+.fila input::placeholder{color:var(--muted); opacity:.6; font-weight:500}
+.fila input[type=date]{min-height:30px}
+.monto-in{display:flex; align-items:center; gap:4px}
+.monto-in span{font-size:1.3rem; font-weight:800; color:var(--muted)}
+.monto-in input{font-size:1.3rem; font-weight:800; height:34px}
+.estado{display:flex; align-items:center; gap:8px; margin:12px 4px 0; font-weight:700; font-size:.92rem; padding:10px 14px; border-radius:14px}
+.estado[hidden]{display:none}
+.estado.ok{background:var(--green-soft); color:var(--green)}
+.estado.no{background:var(--pink-soft); color:var(--pink)}
+.ideas{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px; margin:14px -16px 0; padding-left:16px; padding-right:16px; scrollbar-width:none}
+.ideas::-webkit-scrollbar{display:none}
+.idea{flex:none; border:0; background:var(--card); box-shadow:var(--shadow); color:var(--ink); padding:8px 14px; border-radius:99px; font-weight:600; font-size:.88rem}
+.idea:active{background:var(--primary-soft)}
+.sub{color:var(--muted); font-size:.82rem; font-weight:600; margin:16px 4px 0}
+.btn{
+  width:100%; min-height:56px; border:0; border-radius:18px; background:var(--btn); color:#fff;
+  font-weight:800; font-size:1.02rem; margin-top:16px; box-shadow:0 8px 20px rgba(108,71,255,.3);
+}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.6}
+.btn.suave{background:var(--primary-soft); color:var(--primary); box-shadow:none}
+
+/* Consultar */
+.resultado{text-align:center; padding:22px 12px 6px; animation:pop .35s cubic-bezier(.2,1.2,.4,1)}
+@keyframes pop{from{opacity:0; transform:scale(.92)}to{opacity:1; transform:none}}
+.resultado .gran{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; margin:0 auto 12px}
+.resultado .gran .ic{width:30px; height:30px; stroke-width:2.6}
+.resultado.ok .gran{background:var(--green-soft); color:var(--green)}
+.resultado.no .gran{background:var(--pink-soft); color:var(--pink)}
+.resultado.neutro .gran{background:var(--primary-soft); color:var(--muted)}
+.resultado h3{font-size:1.4rem; font-weight:800; letter-spacing:-.02em}
+.resultado p{color:var(--muted); margin-top:4px}
+.libre{display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line)}
+.libre:last-of-type{border-bottom:0}
+.libre .fecha-bloque{background:var(--green-soft); color:var(--green)}
+.libre .info{flex:1}
+.libre b{display:block; text-transform:capitalize; font-weight:700}
+.libre small{color:var(--green); font-weight:700; font-size:.8rem}
+.chip{border:0; background:var(--primary-soft); color:var(--primary); padding:0 16px; min-height:40px; border-radius:99px; font-weight:700; font-size:.88rem}
+
+/* Navegación inferior */
+nav{
+  position:fixed; left:0; right:0; bottom:0; z-index:5; display:grid; grid-template-columns:1fr 84px 1fr; align-items:center;
+  background:var(--nav); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+  border-top:1px solid var(--line); padding:6px 12px calc(6px + env(safe-area-inset-bottom));
+  max-width:560px; margin:0 auto;
+}
+nav button{border:0; background:none; display:flex; flex-direction:column; align-items:center; gap:3px; min-height:56px; font-size:.75rem; font-weight:700; color:var(--muted)}
+nav button .ic{width:24px; height:24px}
+nav button[aria-current="true"]{color:var(--primary)}
+nav .fab{
+  width:60px; height:60px; min-height:0; border-radius:50%; margin:-30px auto 0; color:#fff !important;
+  background:linear-gradient(135deg,#6C47FF,#FF3D8B); box-shadow:0 10px 24px rgba(108,71,255,.45); justify-content:center;
+  border:4px solid var(--bg);
+}
+nav .fab .ic{width:28px; height:28px; stroke-width:2.6}
+nav .fab:active{transform:scale(.94)}
+
+/* Aviso y PIN */
+.toast{
+  position:fixed; left:16px; right:16px; bottom:calc(104px + env(safe-area-inset-bottom)); max-width:528px; margin:0 auto;
+  background:var(--ink); color:var(--bg); padding:14px 16px; border-radius:16px; font-weight:700; z-index:10; text-align:center;
+  opacity:0; transform:translateY(8px); pointer-events:none; transition:.25s;
+}
+.toast.ver{opacity:1; transform:none}
+.toast.error{background:var(--pink); color:#fff}
+.pin{position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; padding:24px; background:linear-gradient(160deg,#241552,#6C47FF 70%,#FF3D8B)}
+.pin[hidden]{display:none}
+.pin > div{background:var(--card); border-radius:26px; padding:24px; width:100%; max-width:360px}
+.pin h2{font-size:1.4rem; font-weight:800; margin-bottom:4px}
+.pin .sub{margin:0 0 14px}
+.pin-in{width:100%; height:54px; border-radius:16px; border:2px solid var(--line); background:var(--bg); padding:0 16px; font-size:18px; font-weight:700; letter-spacing:.2em; text-align:center}
+.pin-err{color:var(--pink); font-weight:700; font-size:.9rem; margin-bottom:10px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <p id="hoy-texto"></p>
+    <h1>Agenda de fiestas</h1>
+  </div>
+  <button class="icon-btn" id="tema" aria-label="Cambiar tema"></button>
+</header>
+
+<main>
+  <!-- CALENDARIO -->
+  <section class="vista" id="v-calendario">
+    <button class="hero" id="hero" type="button"></button>
+
+    <div class="card">
+      <div class="mes-nav">
+        <button class="icon-btn suave" id="mes-ant" aria-label="Mes anterior"><span data-ic="izq"></span></button>
+        <h2 id="mes-titulo"></h2>
+        <button class="icon-btn suave" id="mes-sig" aria-label="Mes siguiente"><span data-ic="der"></span></button>
+      </div>
+      <div class="grid" id="dow"></div>
+      <div class="grid" id="cal" role="grid"></div>
+      <div class="leyenda">
+        <span><i style="background:var(--pink)"></i>Reservada</span>
+        <span><i style="background:var(--fin);box-shadow:inset 0 0 0 1px var(--line)"></i>Fin de semana</span>
+        <span><i style="box-shadow:inset 0 0 0 2px var(--primary)"></i>Hoy</span>
+      </div>
+    </div>
+
+    <div class="card" id="detalle" hidden></div>
+
+    <div class="stats" id="stats"></div>
+    <h3 class="titulo-sec" style="margin-top:8px">Fiestas del mes</h3>
+    <div id="lista"></div>
+  </section>
+
+  <!-- RESERVAR -->
+  <section class="vista" id="v-reservar" hidden>
+    <h2 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:6px 4px 14px">Nueva reservación</h2>
+    <form id="form" novalidate>
+      <div class="grupo">
+        <label class="fila">
+          <span class="ico" data-ic="cal"></span>
+          <span class="cuerpo"><span class="etq">Fecha de la fiesta</span><input type="date" id="f-fecha" required></span>
+        </label>
+        <label class="fila">
+          <span class="ico" data-ic="user"></span>
+          <span class="cuerpo"><span class="etq">Nombre del cliente</span><input type="text" id="f-cliente" autocomplete="name" placeholder="Ej. María López" required></span>
+        </label>
+        <label class="fila">
+          <span class="ico" data-ic="tel"></span>
+          <span class="cuerpo"><span class="etq">Número de teléfono</span><input type="tel" id="f-tel" inputmode="numeric" autocomplete="tel" placeholder="0000-0000" maxlength="9" required></span>
+        </label>
+        <label class="fila">
+          <span class="ico" data-ic="lugar"></span>
+          <span class="cuerpo"><span class="etq">Lugar de la fiesta</span><input type="text" id="f-lugar" autocomplete="street-address" placeholder="Ej. Salón Los Pinos, Soyapango" required></span>
+        </label>
+        <label class="fila">
+          <span class="ico" data-ic="regalo"></span>
+          <span class="cuerpo"><span class="etq">Temática (opcional)</span><input type="text" id="f-tema" placeholder="Ej. Spiderman"></span>
+        </label>
+        <label class="fila">
+          <span class="ico" data-ic="dinero"></span>
+          <span class="cuerpo"><span class="etq">Monto a cobrar</span>
+            <span class="monto-in"><span>$</span><input type="number" id="f-monto" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required></span>
+          </span>
+        </label>
+      </div>
+      <div class="estado" id="f-pista" hidden></div>
+
+      <p class="sub">Ideas de temática</p>
+      <div class="ideas" id="ideas">
+        <button type="button" class="idea">Princesas</button>
+        <button type="button" class="idea">Superhéroes</button>
+        <button type="button" class="idea">Frozen</button>
+        <button type="button" class="idea">Spiderman</button>
+        <button type="button" class="idea">Bluey</button>
+        <button type="button" class="idea">Minecraft</button>
+        <button type="button" class="idea">Unicornios</button>
+        <button type="button" class="idea">Dinosaurios</button>
+      </div>
+
+      <button class="btn" id="f-guardar" type="submit">Guardar reservación</button>
+    </form>
+  </section>
+
+  <!-- CONSULTAR -->
+  <section class="vista" id="v-consultar" hidden>
+    <h2 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:6px 4px 14px">Consultar disponibilidad</h2>
+    <div class="grupo">
+      <label class="fila">
+        <span class="ico" data-ic="buscar"></span>
+        <span class="cuerpo"><span class="etq">¿Qué fecha te piden?</span><input type="date" id="c-fecha"></span>
+      </label>
+    </div>
+    <button class="btn" id="c-btn" type="button" style="margin-top:12px">Consultar fecha</button>
+    <div id="c-res" aria-live="polite"></div>
+
+    <h3 class="titulo-sec">Próximos fines de semana libres</h3>
+    <div class="card" style="padding:4px 16px">
+      <div id="fines"></div>
+      <button class="btn suave" id="fines-mas" type="button" style="margin:8px 0 14px" hidden>Ver más fechas</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="calendario" aria-current="true"><span data-ic="cal"></span>Calendario</button>
+  <button class="fab" data-tab="reservar" aria-label="Nueva reservación" aria-current="false"><span data-ic="mas"></span></button>
+  <button data-tab="consultar" aria-current="false"><span data-ic="buscar"></span>Consultar</button>
+</nav>
+
+<div class="toast" id="toast" role="status"></div>
+
+<div class="pin" id="pin" hidden>
+  <div>
+    <h2>Ingresa tu PIN</h2>
+    <p class="sub">Esta agenda es privada.</p>
+    <p class="pin-err" id="pin-error" hidden>PIN incorrecto. Intenta de nuevo.</p>
+    <input class="pin-in" type="password" id="pin-input" inputmode="numeric" autocomplete="current-password" placeholder="••••">
+    <button class="btn" id="pin-btn" type="button">Entrar</button>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const pad = (n) => String(n).padStart(2, '0');
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- Iconos ---------- */
+const ICON = {
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  luna: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  tel: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.4A8.4 8.4 0 1 1 21 11.5z"/>',
+  basura: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  mas: '<path d="M12 5v14M5 12h14"/>',
+  buscar: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  regalo: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M7.5 8a2.5 2.5 0 1 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 1 1 0 5"/>',
+  dinero: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.8 9.2c-.6-.8-1.6-1.2-2.8-1.2-1.7 0-2.8.8-2.8 2s1 1.7 2.8 2 2.8.8 2.8 2-1.1 2-2.8 2c-1.2 0-2.3-.4-2.9-1.2"/>',
+  izq: '<path d="M15 5l-7 7 7 7"/>',
+  der: '<path d="M9 5l7 7-7 7"/>',
+  fiesta: '<path d="M4 20l5-14 9 9-14 5z"/><path d="M14 4v2M20 10h-2M18 4l-1.5 1.5M20 16l-1.5-1"/>',
+  lugar: '<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+};
+const ic = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+document.querySelectorAll('[data-ic]').forEach((el) => (el.innerHTML = ic(el.dataset.ic)));
+
+/* ---------- Tema claro / oscuro ---------- */
+function aplicarTema(t, guardar) {
+  document.documentElement.dataset.theme = t;
+  document.querySelector('meta[name="theme-color"]').content = t === 'dark' ? '#0E0B1C' : '#F4F2FB';
+  $('#tema').innerHTML = ic(t === 'dark' ? 'sol' : 'luna');
+  $('#tema').setAttribute('aria-label', t === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+  if (guardar) { try { localStorage.setItem('tema', t); } catch (e) {} }
+}
+aplicarTema(document.documentElement.dataset.theme, false);
+$('#tema').onclick = () => aplicarTema(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  let guardado = null;
+  try { guardado = localStorage.getItem('tema'); } catch (x) {}
+  if (!guardado) aplicarTema(e.matches ? 'dark' : 'light', false);
+});
+
+/* ---------- Fechas y formato ---------- */
+const fmtLargo = new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+const fmtDiaCorto = new Intl.DateTimeFormat('es', { weekday: 'short', timeZone: 'UTC' });
+const fmtMesCorto = new Intl.DateTimeFormat('es', { month: 'short', timeZone: 'UTC' });
+const fmtDiaNombre = new Intl.DateTimeFormat('es', { weekday: 'long', timeZone: 'UTC' });
+const fmtMes = new Intl.DateTimeFormat('es', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const aDate = (f) => new Date(`${f}T00:00:00Z`);
+const largo = (f) => fmtLargo.format(aDate(f));
+const dinero = (n) => new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
+const hoy = () => new Date().toLocaleDateString('en-CA'); // AAAA-MM-DD según el teléfono
+const iniciales = (n) => n.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+const colorAvatar = (n) => {
+  let h = 0;
+  for (const c of n) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return `hsl(${h} 62% 52%)`;
+};
+const fmtTel = (t) => {
+  const d = t.replace(/\D/g, '');
+  return d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4) : t;
+};
+const telWhatsApp = (tel) => {
+  const d = tel.replace(/\D/g, '');
+  return d.length === 8 ? '503' + d : d; // 8 dígitos = El Salvador
+};
+
+/* ---------- Estado ---------- */
+let pin = '';
+try { pin = localStorage.getItem('pin') || ''; } catch (e) {}
+const t0 = hoy();
+let vista = { y: +t0.slice(0, 4), m: +t0.slice(5, 7) - 1 };
+let reservas = [];
+let proxima = null;
+let sel = t0;
+let finesN = 10;
+
+/* ---------- API ---------- */
+async function api(url, opts = {}) {
+  const res = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', 'x-pin': pin } });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { pedirPin(); throw new Error('PIN requerido'); }
+  if (!res.ok) throw new Error(data.error || 'Error del servidor');
+  return data;
+}
+const fallo = (e) => { if (e.message !== 'PIN requerido') toast(e.message, true); };
+
+function toast(msg, error = false) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.className = 'toast ver' + (error ? ' error' : '');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => (el.className = 'toast'), 3200);
+}
+
+/* ---------- PIN ---------- */
+function pedirPin() {
+  $('#pin').hidden = false;
+  $('#pin-error').hidden = !pin;
+  $('#pin-input').value = '';
+  $('#pin-input').focus();
+}
+$('#pin-btn').onclick = async () => {
+  pin = $('#pin-input').value.trim();
+  try {
+    await api('/api/ping');
+    try { localStorage.setItem('pin', pin); } catch (e) {}
+    $('#pin').hidden = true;
+    cargarMes();
+  } catch (e) {}
+};
+$('#pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#pin-btn').click(); });
+
+/* ---------- Navegación ---------- */
+function ir(tab) {
+  document.querySelectorAll('.vista').forEach((v) => (v.hidden = v.id !== 'v-' + tab));
+  document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-current', b.dataset.tab === tab));
+  window.scrollTo(0, 0);
+  if (tab === 'consultar') cargarFines();
+}
+document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => ir(b.dataset.tab)));
+
+function irAReservar(fecha) {
+  $('#f-fecha').value = fecha;
+  verificarFormulario();
+  ir('reservar');
+}
+
+/* ---------- Calendario ---------- */
+$('#dow').innerHTML = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+  .map((d, i) => `<div class="dow ${i >= 5 ? 'fin' : ''}">${d}</div>`).join('');
+
+async function cargarMes() {
+  const mes = `${vista.y}-${pad(vista.m + 1)}`;
+  try {
+    reservas = await api('/api/reservas?mes=' + mes);
+    pintarTodo();
+    cargarProxima();
+  } catch (e) { fallo(e); }
+}
+
+async function cargarProxima() {
+  try { proxima = await api('/api/proxima'); pintarHero(); } catch (e) {}
+}
+
+function pintarTodo() {
+  pintarCalendario();
+  pintarDetalle();
+  pintarStats();
+  pintarLista();
+}
+
+function pintarHero() {
+  const el = $('#hero');
+  if (!proxima) {
+    el.innerHTML = `<div class="hero-top"><span>Próxima fiesta</span></div>
+      <h2>Sin fiestas próximas</h2><p>Toca el botón + para reservar una fecha.</p>`;
+    el.onclick = () => ir('reservar');
+    return;
+  }
+  const dias = Math.round((aDate(proxima.fecha) - aDate(hoy())) / 864e5);
+  const cuando = dias === 0 ? 'Hoy' : dias === 1 ? 'Mañana' : `En ${dias} días`;
+  el.innerHTML = `
+    <div class="hero-top"><span>Próxima fiesta</span><b class="pill">${cuando}</b></div>
+    <h2>${esc(proxima.cliente)}</h2>
+    <p>${esc(proxima.lugar || 'Lugar por definir')}</p>${proxima.tematica ? `<p>Temática: ${esc(proxima.tematica)}</p>` : ''}
+    <div class="fila-h"><p>${cap(largo(proxima.fecha))}</p><span class="monto-h">${dinero(proxima.monto)}</span></div>`;
+  el.onclick = () => {
+    sel = proxima.fecha;
+    vista = { y: +sel.slice(0, 4), m: +sel.slice(5, 7) - 1 };
+    cargarMes().then(() => $('#detalle').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  };
+}
+
+function pintarCalendario() {
+  const { y, m } = vista;
+  $('#mes-titulo').textContent = fmtMes.format(Date.UTC(y, m, 1));
+  const offset = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7; // semana inicia en lunes
+  const dias = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const porFecha = Object.fromEntries(reservas.map((r) => [r.fecha, r]));
+  const hoyF = hoy();
+  let html = '<div class="dia vacio"></div>'.repeat(offset);
+  for (let d = 1; d <= dias; d++) {
+    const f = `${y}-${pad(m + 1)}-${pad(d)}`;
+    const col = (offset + d - 1) % 7;
+    const cls = ['dia'];
+    if (col >= 5) cls.push('fin');
+    if (f < hoyF) cls.push('pasado');
+    if (f === hoyF) cls.push('hoy');
+    if (f === sel) cls.push('sel');
+    const r = porFecha[f];
+    if (r) cls.push('ocupado');
+    const label = r ? `${largo(f)}, reservada por ${r.cliente}` : `${largo(f)}, libre`;
+    html += `<button class="${cls.join(' ')}" data-f="${f}" aria-label="${esc(label)}"><span class="n">${d}</span></button>`;
+  }
+  $('#cal').innerHTML = html;
+  $('#cal').querySelectorAll('.dia[data-f]').forEach((b) => {
+    b.onclick = () => {
+      sel = b.dataset.f;
+      pintarCalendario();
+      pintarDetalle();
+      $('#detalle').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+  });
+}
+
+function pintarDetalle() {
+  const el = $('#detalle');
+  if (!sel || sel.slice(0, 7) !== `${vista.y}-${pad(vista.m + 1)}`) { el.hidden = true; return; }
+  el.hidden = false;
+  const r = reservas.find((x) => x.fecha === sel);
+  const titulo = `<h3>${cap(largo(sel))}</h3>`;
+
+  if (r) {
+    el.innerHTML = `
+      <div class="det-cab">${titulo}<span class="badge no">Reservada</span></div>
+      <div class="cliente">
+        <div class="avatar" style="background:${colorAvatar(r.cliente)}">${esc(iniciales(r.cliente))}</div>
+        <div class="info"><h4>${esc(r.cliente)}</h4>${r.tematica ? `<span class="tema-chip">${ic('regalo')}${esc(r.tematica)}</span>` : ''}</div>
+        <div class="precio">${dinero(r.monto)}</div>
+      </div>
+      <div class="datos">
+        <div>${ic('lugar')}<span>${esc(r.lugar || 'Lugar por definir')}</span></div>
+        <div>${ic('tel')}<span>${esc(fmtTel(r.telefono))}</span></div>
+      </div>
+      <div class="acciones">
+        <a class="acc" href="tel:${r.telefono.replace(/\D/g, '')}">${ic('tel')}Llamar</a>
+        <a class="acc wa" href="https://wa.me/${telWhatsApp(r.telefono)}" target="_blank" rel="noopener">${ic('chat')}WhatsApp</a>
+        <button class="acc peligro" type="button" id="det-del">${ic('basura')}Eliminar</button>
+      </div>`;
+    $('#det-del').onclick = async () => {
+      if (!confirm('¿Eliminar esta reservación? La fecha quedará libre.')) return;
+      try {
+        await api('/api/reservas/' + r.id, { method: 'DELETE' });
+        toast('Reservación eliminada');
+        cargarMes();
+      } catch (e) { fallo(e); }
+    };
+  } else if (sel < hoy()) {
+    el.innerHTML = `<div class="det-cab">${titulo}<span class="badge neutro">Pasada</span></div>
+      <p class="libre-msg">Esta fecha ya pasó y no tiene fiesta registrada.</p>`;
+  } else {
+    el.innerHTML = `<div class="det-cab">${titulo}<span class="badge ok">Disponible</span></div>
+      <p class="libre-msg">No hay ninguna fiesta este día.</p>
+      <button class="btn" type="button" id="det-res" style="margin-top:14px">Reservar este día</button>`;
+    $('#det-res').onclick = () => irAReservar(sel);
+  }
+}
+
+function pintarStats() {
+  const total = reservas.reduce((s, r) => s + Number(r.monto), 0);
+  $('#stats').innerHTML = `
+    <div class="stat"><div class="ico">${ic('fiesta')}</div><b>${reservas.length}</b><span>${reservas.length === 1 ? 'Fiesta este mes' : 'Fiestas este mes'}</span></div>
+    <div class="stat"><div class="ico">${ic('dinero')}</div><b>${dinero(total)}</b><span>Total a cobrar</span></div>`;
+}
+
+function pintarLista() {
+  if (!reservas.length) {
+    $('#lista').innerHTML = '<div class="vacio-msg">No hay fiestas este mes. Toca un día libre del calendario para reservar.</div>';
+    return;
+  }
+  $('#lista').innerHTML = reservas.map((r) => `
+    <button class="item" type="button" data-f="${r.fecha}">
+      <div class="fecha-bloque"><b>${+r.fecha.slice(8)}</b><small>${fmtDiaCorto.format(aDate(r.fecha))}</small></div>
+      <div class="info"><h4>${esc(r.cliente)}</h4><p>${esc(r.lugar || 'Lugar por definir')}${r.tematica ? ', ' + esc(r.tematica) : ''}</p></div>
+      <div class="precio">${dinero(r.monto)}</div>
+    </button>`).join('');
+  $('#lista').querySelectorAll('.item').forEach((b) => {
+    b.onclick = () => {
+      sel = b.dataset.f;
+      pintarCalendario();
+      pintarDetalle();
+      $('#detalle').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+  });
+}
+
+$('#mes-ant').onclick = () => { vista.m--; if (vista.m < 0) { vista.m = 11; vista.y--; } cargarMes(); };
+$('#mes-sig').onclick = () => { vista.m++; if (vista.m > 11) { vista.m = 0; vista.y++; } cargarMes(); };
+
+/* ---------- Reservar ---------- */
+$('#f-fecha').min = hoy();
+
+async function verificarFormulario() {
+  const f = $('#f-fecha').value;
+  const p = $('#f-pista');
+  if (!f) { p.hidden = true; return; }
+  try {
+    const d = await api('/api/disponibilidad?fecha=' + f);
+    p.hidden = false;
+    if (d.pasada) { p.className = 'estado no'; p.innerHTML = ic('x') + 'Esa fecha ya pasó'; }
+    else if (d.disponible) { p.className = 'estado ok'; p.innerHTML = ic('check') + 'Fecha disponible'; }
+    else { p.className = 'estado no'; p.innerHTML = ic('x') + `Ocupada: ${esc(d.reserva.cliente)}${d.reserva.lugar ? ' en ' + esc(d.reserva.lugar) : ''}`; }
+  } catch (e) {}
+}
+$('#f-fecha').onchange = verificarFormulario;
+
+const formatearTel = (v) => {
+  const d = v.replace(/\D/g, '').slice(0, 8);
+  return d.length > 4 ? d.slice(0, 4) + '-' + d.slice(4) : d;
+};
+$('#f-tel').addEventListener('input', (e) => { e.target.value = formatearTel(e.target.value); });
+
+document.querySelectorAll('.idea').forEach((b) => {
+  b.onclick = () => { $('#f-tema').value = b.textContent; };
+});
+
+$('#form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    fecha: $('#f-fecha').value,
+    cliente: $('#f-cliente').value,
+    telefono: $('#f-tel').value,
+    lugar: $('#f-lugar').value,
+    tematica: $('#f-tema').value,
+    monto: $('#f-monto').value,
+  };
+  if (!body.fecha || !body.cliente.trim() || !body.telefono.trim() || !body.lugar.trim() || body.monto === '') {
+    return toast('Completa todos los campos', true);
+  }
+  if (body.telefono.replace(/\D/g, '').length !== 8) {
+    return toast('El teléfono debe tener 8 dígitos (0000-0000)', true);
+  }
+  const btn = $('#f-guardar');
+  btn.disabled = true;
+  try {
+    await api('/api/reservas', { method: 'POST', body: JSON.stringify(body) });
+    toast('Reservación guardada');
+    vista = { y: +body.fecha.slice(0, 4), m: +body.fecha.slice(5, 7) - 1 };
+    sel = body.fecha;
+    $('#form').reset();
+    $('#f-pista').hidden = true;
+    await cargarMes();
+    ir('calendario');
+  } catch (err) {
+    fallo(err);
+    verificarFormulario();
+  } finally { btn.disabled = false; }
+});
+
+/* ---------- Consultar ---------- */
+$('#c-btn').onclick = async () => {
+  const f = $('#c-fecha').value;
+  if (!f) return toast('Elige una fecha primero', true);
+  const out = $('#c-res');
+  try {
+    const d = await api('/api/disponibilidad?fecha=' + f);
+    const nombre = cap(largo(f));
+    if (d.pasada) {
+      out.innerHTML = `<div class="resultado neutro"><div class="gran">${ic('cal')}</div><h3>Fecha pasada</h3><p>${nombre} ya pasó.</p></div>`;
+    } else if (d.disponible) {
+      out.innerHTML = `<div class="resultado ok"><div class="gran">${ic('check')}</div><h3>Disponible</h3>
+        <p>${nombre} está libre${d.finDeSemana ? ' (fin de semana)' : ''}.</p></div>
+        <button class="btn" id="c-reservar" type="button">Reservar esta fecha</button>`;
+      $('#c-reservar').onclick = () => irAReservar(f);
+    } else {
+      out.innerHTML = `<div class="resultado no"><div class="gran">${ic('x')}</div><h3>No disponible</h3>
+        <p>${nombre} ya está reservada: ${esc(d.reserva.cliente)}${d.reserva.lugar ? ', en ' + esc(d.reserva.lugar) : ''}${d.reserva.tematica ? ', temática ' + esc(d.reserva.tematica) : ''}.</p></div>`;
+    }
+  } catch (e) { fallo(e); }
+};
+
+async function cargarFines() {
+  try {
+    const fechas = await api('/api/fines-de-semana?cantidad=' + finesN);
+    $('#fines').innerHTML = fechas.length
+      ? fechas.map((f) => `
+        <div class="libre">
+          <div class="fecha-bloque"><b>${+f.slice(8)}</b><small>${fmtMesCorto.format(aDate(f))}</small></div>
+          <div class="info"><b>${fmtDiaNombre.format(aDate(f))}</b><small>Libre</small></div>
+          <button class="chip" type="button" data-f="${f}">Reservar</button>
+        </div>`).join('')
+      : '<div class="vacio-msg" style="margin:12px 0">No hay fines de semana libres en el próximo año.</div>';
+    $('#fines').querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => irAReservar(b.dataset.f)));
+    $('#fines-mas').hidden = fechas.length < finesN;
+  } catch (e) { fallo(e); }
+}
+$('#fines-mas').onclick = () => { finesN += 10; cargarFines(); };
+
+/* ---------- App instalable ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+
+/* ---------- Inicio ---------- */
+$('#hoy-texto').textContent = largo(hoy());
+(async () => {
+  try { await api('/api/ping'); cargarMes(); } catch (e) {}
+})();
+</script>
+</body>
+</html>
